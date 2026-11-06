@@ -6,7 +6,8 @@ from django.core.exceptions import ValidationError
 from django.core.validators import FileExtensionValidator
 
 
-def uuid_upload_to(instance, filename):
+
+def uuid_upload_to(_, filename):
     ext = os.path.splitext(filename)[1].lower()
     new_filename = f"{uuid.uuid4()}{ext}"
     return os.path.join('users/', new_filename)
@@ -68,5 +69,3 @@ class Message(models.Model):
 
     def __str__(self):
         return self.message_content
-
-

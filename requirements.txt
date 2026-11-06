@@ -1,0 +1,6 @@
+Django
+channels
+Pillow
+asgiref
+django-cleanup
+uvicorn
