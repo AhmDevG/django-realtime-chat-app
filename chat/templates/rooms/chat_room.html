@@ -1,381 +1,360 @@
-{% extends 'base.html' %}
+{% extends 'base.html' %} 
 
-{% block title %}{{ room.room_name }} | ChatApp{% endblock %}
+{% block title %}
+{{ room.room_name }} | ChatApp
+{% endblock %}
 
 {% block content %}
 <div class="flex h-screen">
-  <div id="main-chat" class="flex-1 flex flex-col">
-    <div class="p-4 border-b border-primary bg-neutral sticky top-0 z-10">
-      <div class="flex items-center justify-between">
-        <div class="flex-1 min-w-0">
-          <h2 class="text-xl font-bold truncate text-primary room-name">{{ room.room_name }}</h2>
-          <p class="text-sm truncate text-primary room-description">{{ room.room_description }}</p>
-        </div>
-      </div>
-    </div>
-
-    <div id="chat-log" class="flex-1 overflow-y-auto p-4 space-y-4 bg-base-100">
-      {% for msg in chat_msgs %}
-      <div id="msg-{{ msg.id }}" class="flex items-start gap-3 group">
-        <div class="avatar">
-          <div class="w-10 rounded-full border-2 border-primary">
-            <img src="{{ msg.message_author.profile.url }}" alt="{{ msg.message_author.username }}" />
-          </div>
-        </div>
-        <div class="flex-1 max-w-[80%] relative">
-          <div class="flex items-center mb-1">
-            <span class="font-bold {% if msg.message_author == current_user %}text-primary{% else %}text-white{% endif %}">
-              {{ msg.message_author.username }}
-            </span>
-            <time class="text-xs opacity-70 ml-2">{{ msg.created_at|date:"H:i" }}</time>
-          </div>
-
-          {% if msg.reply_to %}
-          <a href="#msg-{{ msg.reply_to.id }}" onclick="highlightMessage('msg-{{ msg.reply_to.id }}')"
-            class="text-xs border-l-4 border-accent pl-2 mb-1 bg-neutral text-white flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24"
-              stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M3 10h11M3 6h7m1 12l4-4-4-4" />
-            </svg>
-            <strong>{{ msg.reply_to.message_author.username }}:</strong>
-            <span class="truncate ml-1">{{ msg.reply_to.message_content|truncatechars:40 }}</span>
-          </a>
-          {% endif %}
-
-          <div class="relative">
-            <div id="message-{{ msg.id }}" class="chat-bubble {% if msg.message_author == current_user %}chat-bubble-primary{% else %}chat-bubble-natural{% endif %}">
-              {{ msg.message_content }}
+    <div id="main-chat" class="flex-1 flex flex-col">
+        <div class="p-4 border-b border-primary bg-neutral sticky top-0 z-10">
+            <div class="flex items-center justify-between">
+                <div class="flex-1 min-w-0">
+                    <h2
+                        class="text-xl font-bold truncate text-primary room-name"
+                    >
+                        {{ room.room_name }}
+                    </h2>
+                    <p class="text-sm truncate text-primary room-description">
+                        {{ room.room_description }}
+                    </p>
+                </div>
             </div>
+        </div>
 
+        <div
+            id="chat-log"
+            class="flex-1 overflow-y-auto p-4 space-y-4 bg-base-100"
+        >
+            {% for msg in chat_msgs %}
+            <div id="msg-{{ msg.id }}" class="flex items-start gap-3 group">
+                <div class="avatar">
+                    <div class="w-10 rounded-full border-2 border-primary">
+                        <img
+                            src="{{ msg.message_author.profile.url }}"
+                            alt="{{ msg.message_author.username }}"
+                        />
+                    </div>
+                </div>
+                <div class="flex-1 max-w-[80%] relative">
+                    <div class="flex items-center mb-1">
+                        <span
+                            class="font-bold {% if msg.message_author == current_user %}text-primary{% else %}text-white{% endif %}"
+                        >
+                            {{ msg.message_author.username }}
+                        </span>
+                        <time class="text-xs opacity-70 ml-2"
+                            >{{ msg.created_at|date:"H:i" }}</time
+                        >
+                    </div>
+
+                    {% if msg.reply_to %}
+                    <a
+                        href="#msg-{{ msg.reply_to.id }}"
+                        onclick="highlightMessage('msg-{{ msg.reply_to.id }}')"
+                        class="text-xs border-l-4 border-accent pl-2 mb-1 bg-neutral text-white flex items-center"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-3 w-3 mr-1"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M3 10h11M3 6h7m1 12l4-4-4-4"
+                            />
+                        </svg>
+                        <strong
+                            >{{ msg.reply_to.message_author.username }}:</strong
+                        >
+                        <span class="truncate ml-1"
+                            >{{ msg.reply_to.message_content|truncatechars:40
+                            }}</span
+                        >
+                    </a>
+                    {% endif %}
+
+                    <div class="relative">
+                        <div
+                            id="message-{{ msg.id }}"
+                            class="chat-bubble {% if msg.message_author == current_user %}chat-bubble-primary{% else %}chat-bubble-natural{% endif %}"
+                        >
+                            {{ msg.message_content }}
+                        </div>
+
+                        <div
+                            class="absolute -top-4 right-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200"
+                        >
+                            <button
+                                onclick="setReply({{ msg.id }}, '{{ msg.message_author.username }}', '{{ msg.message_content|escapejs }}')"
+                                class="btn btn-xs btn-circle btn-ghost hover:bg-primary hover:text-primary-content"
+                                title="Reply"
+                            >
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    class="h-4 w-4"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M3 10h11M3 6h7m1 12l4-4-4-4"
+                                    />
+                                </svg>
+                            </button>
+
+                            {% if msg.message_author == current_user %}
+                            <button
+                                onclick="deleteMessage({{ msg.id }})"
+                                class="btn btn-xs btn-circle btn-ghost hover:bg-error hover:text-error-content"
+                                title="Delete"
+                            >
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    class="h-4 w-4"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M6 18L18 6M6 6l12 12"
+                                    />
+                                </svg>
+                            </button>
+
+                            <button
+                                onclick="enableEdit({{ msg.id }})"
+                                class="btn btn-xs btn-circle btn-ghost hover:bg-warning hover:text-warning-content"
+                                title="Edit"
+                            >
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    class="h-4 w-4"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3z"
+                                    />
+                                </svg>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+
+            <div id="scroll-anchor"></div>
+        </div>
+
+        <div id="reply-box" class="hidden mx-4 mt-2 mb-1">
             <div
-              class="absolute -top-4 right-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
-
-              <button onclick="setReply({{ msg.id }}, '{{ msg.message_author.username }}', '{{ msg.message_content|escapejs }}')"
-                class="btn btn-xs btn-circle btn-ghost hover:bg-primary hover:text-primary-content" title="Reply">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                  stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M3 10h11M3 6h7m1 12l4-4-4-4" />
-                </svg>
-              </button>
-
-              {% if msg.message_author == current_user %}
-              <button onclick="deleteMessage({{ msg.id }})"
-                class="btn btn-xs btn-circle btn-ghost hover:bg-error hover:text-error-content" title="Delete">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                  stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-
-              <button onclick="enableEdit({{ msg.id }})"
-                class="btn btn-xs btn-circle btn-ghost hover:bg-warning hover:text-warning-content" title="Edit">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                  stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3z" />
-                </svg>
-              </button>
-              {% endif %}
+                class="flex items-center bg-neutral text-neutral-content rounded-lg p-2 border border-primary shadow-lg"
+            >
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs font-bold truncate">
+                        Replying to
+                        <span class="text-accent" id="reply-user"></span>
+                    </p>
+                    <p
+                        class="text-xs truncate text-secondary"
+                        id="reply-content"
+                    ></p>
+                </div>
+                <button
+                    onclick="clearReply()"
+                    class="btn btn-xs btn-circle btn-ghost hover:bg-error hover:text-error-content"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12"
+                        />
+                    </svg>
+                </button>
             </div>
-          </div>
         </div>
-      </div>
-      {% endfor %}
 
-      <div id="scroll-anchor"></div>
-    </div>
-
-    <div id="reply-box" class="hidden mx-4 mt-2 mb-1">
-      <div
-        class="flex items-center bg-neutral text-neutral-content rounded-lg p-2 border border-primary shadow-lg">
-        <div class="flex-1 min-w-0">
-          <p class="text-xs font-bold truncate">
-            Replying to <span class="text-accent" id="reply-user"></span>
-          </p>
-          <p class="text-xs truncate text-secondary" id="reply-content"></p>
+        <div class="p-4 border-t border-primary bg-neutral sticky bottom-0">
+            <form method="post" class="flex gap-2">
+                {% csrf_token %}
+                <input type="hidden" name="reply_id" id="reply-id" value="" />
+                <input
+                    name="chat_message"
+                    type="text"
+                    placeholder="Type your message..."
+                    class="input input-bordered flex-1 bg-base-100 focus:border-primary focus:ring-2 focus:ring-primary"
+                    autocomplete="off"
+                    autofocus
+                />
+                <button type="submit" class="btn btn-primary gap-2">
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-5 w-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M13 5l7 7-7 7M5 5l7 7-7 7"
+                        />
+                    </svg>
+                    Send
+                </button>
+            </form>
         </div>
-        <button onclick="clearReply()" class="btn btn-xs btn-circle btn-ghost hover:bg-error hover:text-error-content">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-            stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
     </div>
 
-    <div class="p-4 border-t border-primary bg-neutral sticky bottom-0">
-      <form method="post" class="flex gap-2">
-        {% csrf_token %}
-        <input type="hidden" name="reply_id" id="reply-id" value="">
-        <input name="chat_message" type="text" placeholder="Type your message..."
-          class="input input-bordered flex-1 bg-base-100 focus:border-primary focus:ring-2 focus:ring-primary" autocomplete="off"
-          autofocus>
-        <button type="submit" class="btn btn-primary gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
-            stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-          </svg>
-          Send
-        </button>
-      </form>
+    <div
+        id="sidebar"
+        class="w-60 border-l border-gray-300 bg-dark flex flex-col transition-transform duration-300"
+    >
+        <div class="flex justify-between items-center p-3 border-b">
+            <h2 class="font-bold text-lg">Online Members</h2>
+            <span id="onlineCount" class="badge badge-primary">0</span>
+        </div>
+        <div
+            id="membersList"
+            class="flex-1 overflow-y-auto p-3 space-y-3"
+        ></div>
     </div>
-  </div>
-
-  <div id="sidebar" class="w-60 border-l border-gray-300 bg-dark flex flex-col transition-transform duration-300">
-    <div class="flex justify-between items-center p-3 border-b">
-      <h2 class="font-bold text-lg">Online Members</h2>
-      <span id="onlineCount" class="badge badge-primary">0</span>
-    </div>
-    <div id="membersList" class="flex-1 overflow-y-auto p-3 space-y-3">
-    </div>
-  </div>
-  
-
 </div>
 
 <script>
-    const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
-    const current_room_id = {{ room.id }};
-    
-    const room_socket = new WebSocket(ws_scheme + "://" + window.location.host + "/ws/rooms/");
-    
-    const chat_socket = new WebSocket(`${ws_scheme}://${window.location.host}/ws/room/${current_room_id}/`);
-  
-    let activeUsers = [];
     let replyId = null;
     let currentEditId = null;
-  
-    room_socket.onmessage = function(e) {
-      const data = JSON.parse(e.data);
-  
-      if (data.type === "room.updated" && data.room.id === current_room_id) {
-        handleRoomUpdate(data);
-      } 
-      else if (data.type === "room.deleted" && data.room.id === current_room_id) {
-        handleRoomDeleted(data);
-      }
-    };
-  
-    room_socket.onclose = function(e) {
-      console.log("Room socket closed:", e);
-    };
-  
 
-  
-    chat_socket.onopen = function(e) {
-      console.log("Chat socket connected for room:", current_room_id);
-    };
-  
-    chat_socket.onmessage = function(e) {
-      const data = JSON.parse(e.data);
-  
-      if (data.type === "initial_data") {
-        handleInitialData(data);
-      }
-      else if (data.type === "user_joined" || data.type === "user_left") {
-        handleUserActivity(data);
-      }
-      else if (data.type === "chat_message") {
-        handleChatMessage(data);
-      }
-    };
-  
-    chat_socket.onclose = function(e) {
-      console.log("Chat socket closed:", e);
-
-    };
-  
-    chat_socket.onerror = function(e) {
-      console.error("Chat socket error:", e);
-    };
-  
-    function handleInitialData(data) {
-      updateActiveUsers(data.active_users);
-    }
-  
-    function handleUserActivity(data) {
-      updateActiveUsers(data.active_users);
-      
-      const chatLog = document.getElementById('chat-log');
-      const notification = document.createElement('div');
-      notification.className = 'text-center text-sm text-gray-500 my-2';
-      notification.textContent = data.message;
-      chatLog.appendChild(notification);
-      scrollToBottom();
-    }
-  
-    function handleRoomUpdate(data) {
-      const room = data.room;
-      document.querySelector('.room-name').textContent = room.room_name;
-      document.querySelector('.room-description').textContent = room.room_description;
-      document.title = `${room.room_name} | ChatApp`;
-    }
-  
-    function handleRoomDeleted(data) {
-      alert(`This room has been deleted.`);
-      window.location.href = "/";
-    }
-  
-
-  
-
-  
-    function updateActiveUsers(users) {
-      activeUsers = users;
-      const membersList = document.getElementById('membersList');
-      const onlineCount = document.getElementById('onlineCount');
-      
-      if (onlineCount) {
-        onlineCount.textContent = users.length;
-      }
-      
-      if (membersList) {
-        while (membersList.firstChild) {
-          membersList.removeChild(membersList.firstChild);
-        }
-        
-        users.forEach(user => {
-          const memberElement = document.createElement('a');
-          memberElement.setAttribute("href" , `/user/${user.id}`)
-          memberElement.setAttribute("target" , "_blank")
-          memberElement.className = 'flex items-center gap-3 cursor-pointer hover:bg-gray-800 px-2 py-1 transition-all duration-300 rounded-lg';
-          
-          const avatarContainer = document.createElement('div');
-          avatarContainer.className = 'avatar avatar-online';
-          
-          const avatarInner = document.createElement('div');
-          avatarInner.className = 'w-10 rounded-full';
-          
-          const avatarImg = document.createElement('img');
-          avatarImg.src = user.avatar;
-          avatarImg.alt = user.username;
-          
-          avatarInner.appendChild(avatarImg);
-          avatarContainer.appendChild(avatarInner);
-          
-          const usernameSpan = document.createElement('span');
-          usernameSpan.textContent = `@${user.username}`;
-          
-          memberElement.appendChild(avatarContainer);
-          memberElement.appendChild(usernameSpan);
-          
-          membersList.appendChild(memberElement);
-        });
-      }
-    }
-  
     function scrollToBottom() {
-      const anchor = document.getElementById('scroll-anchor');
-      if (anchor) {
-        anchor.scrollIntoView({ behavior: 'instant' });
-      }
+        const anchor = document.getElementById("scroll-anchor");
+        if (anchor) {
+            anchor.scrollIntoView({ behavior: "instant" });
+        }
     }
-  
+
     function highlightMessage(id) {
-      const el = document.getElementById(id);
-      if (!el) return;
-      
-      el.classList.add('animate-pulse', 'bg-primary', 'bg-opacity-10');
-      setTimeout(() => {
-        el.classList.remove('animate-pulse', 'bg-primary', 'bg-opacity-10');
-      }, 2000);
+        const el = document.getElementById(id);
+        if (!el) return;
+
+        el.classList.add("animate-pulse", "bg-primary", "bg-opacity-10");
+        setTimeout(() => {
+            el.classList.remove("animate-pulse", "bg-primary", "bg-opacity-10");
+        }, 2000);
     }
-  
+
     function setReply(id, username, message) {
-      replyId = id;
-      const maxLength = 50;
-      const displayMsg = message.length > maxLength ? 
-        message.substring(0, maxLength) + "..." : message;
-      
-      document.getElementById('reply-id').value = id;
-      document.getElementById('reply-user').textContent = username;
-      document.getElementById('reply-content').textContent = displayMsg;
-      document.getElementById('reply-box').classList.remove('hidden');
-      document.querySelector('input[name="chat_message"]').focus();
+        replyId = id;
+        const maxLength = 50;
+        const displayMsg =
+            message.length > maxLength
+                ? message.substring(0, maxLength) + "..."
+                : message;
+
+        document.getElementById("reply-id").value = id;
+        document.getElementById("reply-user").textContent = username;
+        document.getElementById("reply-content").textContent = displayMsg;
+        document.getElementById("reply-box").classList.remove("hidden");
+        document.querySelector('input[name="chat_message"]').focus();
     }
-  
+
     function clearReply() {
-      replyId = null;
-      document.getElementById('reply-id').value = '';
-      document.getElementById('reply-user').textContent = '';
-      document.getElementById('reply-content').textContent = '';
-      document.getElementById('reply-box').classList.add('hidden');
+        replyId = null;
+        document.getElementById("reply-id").value = "";
+        document.getElementById("reply-user").textContent = "";
+        document.getElementById("reply-content").textContent = "";
+        document.getElementById("reply-box").classList.add("hidden");
     }
-  
+
     function deleteMessage(id) {
         // delete message logic
     }
-  
+
     function enableEdit(messageId) {
-      const messageDiv = document.getElementById(`message-${messageId}`);
-  
-      if (document.querySelector('.edit-input')) {
-        alert("Please finish editing the current message first.");
-        return;
-      }
-  
-      const oldText = messageDiv.textContent;
-  
-      while (messageDiv.firstChild) {
-        messageDiv.removeChild(messageDiv.firstChild);
-      }
-  
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.value = oldText;
-      input.className = 'input input-bordered input-sm w-full edit-input bg-white';
-      input.id = `edit-input-${messageId}`;
-  
-      const saveBtn = document.createElement('button');
-      saveBtn.textContent = 'Save';
-      saveBtn.className = 'btn btn-xs btn-primary ml-2';
-      saveBtn.onclick = () => submitEdit(messageId, oldText);
-  
-      const cancelBtn = document.createElement('button');
-      cancelBtn.textContent = 'Cancel';
-      cancelBtn.className = 'btn btn-xs btn-ghost ml-1';
-      cancelBtn.onclick = () => cancelEdit(messageId, oldText);
-  
-      messageDiv.appendChild(input);
-      messageDiv.appendChild(saveBtn);
-      messageDiv.appendChild(cancelBtn);
-  
-      input.focus();
+        const messageDiv = document.getElementById(`message-${messageId}`);
+
+        if (document.querySelector(".edit-input")) {
+            alert("Please finish editing the current message first.");
+            return;
+        }
+
+        const oldText = messageDiv.textContent;
+
+        while (messageDiv.firstChild) {
+            messageDiv.removeChild(messageDiv.firstChild);
+        }
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.value = oldText;
+        input.className =
+            "input input-bordered input-sm w-full edit-input bg-white";
+        input.id = `edit-input-${messageId}`;
+
+        const saveBtn = document.createElement("button");
+        saveBtn.textContent = "Save";
+        saveBtn.className = "btn btn-xs btn-primary ml-2";
+        saveBtn.onclick = () => submitEdit(messageId, oldText);
+
+        const cancelBtn = document.createElement("button");
+        cancelBtn.textContent = "Cancel";
+        cancelBtn.className = "btn btn-xs btn-ghost ml-1";
+        cancelBtn.onclick = () => cancelEdit(messageId, oldText);
+
+        messageDiv.appendChild(input);
+        messageDiv.appendChild(saveBtn);
+        messageDiv.appendChild(cancelBtn);
+
+        input.focus();
     }
-  
+
     function cancelEdit(messageId, oldText) {
-      const messageDiv = document.getElementById(`message-${messageId}`);
-      
-      while (messageDiv.firstChild) {
-        messageDiv.removeChild(messageDiv.firstChild);
-      }
-  
-      messageDiv.textContent = oldText;
-    }
-  
-    function submitEdit(messageId, oldText) {
-      // handle submit
-      cancelEdit(messageId, oldText);
-    }
-  
-    window.addEventListener('load', () => {
-      scrollToBottom();
-      
-      if (location.hash.startsWith('#msg-')) {
-        highlightMessage(location.hash.substring(1));
-      }
-    });
-  
-    window.addEventListener('hashchange', () => {
-      if (location.hash.startsWith('#msg-')) {
-        highlightMessage(location.hash.substring(1));
-      }
-    });
-  
+        const messageDiv = document.getElementById(`message-${messageId}`);
 
+        while (messageDiv.firstChild) {
+            messageDiv.removeChild(messageDiv.firstChild);
+        }
 
+        messageDiv.textContent = oldText;
+    }
+
+    window.addEventListener("load", () => {
+        scrollToBottom();
+
+        if (location.hash.startsWith("#msg-")) {
+            highlightMessage(location.hash.substring(1));
+        }
+    });
+
+    window.addEventListener("hashchange", () => {
+        if (location.hash.startsWith("#msg-")) {
+            highlightMessage(location.hash.substring(1));
+        }
+    });
 </script>
 
 {% endblock %}
