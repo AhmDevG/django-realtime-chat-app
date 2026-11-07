@@ -49,6 +49,111 @@
         const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
         const ws_url = ws_scheme + "://" + window.location.host + "/ws/rooms/"
         let socket = null
+
+
+        function handleRoomCreate(data){
+            const room = data.room;
+
+
+
+            if (!document.getElementById(`room-${room.id}`)) {
+                const div = document.createElement("div");
+                div.id = `room-${room.id}`;
+                div.className = "card bg-base-100 shadow-md border border-base-200";
+        
+                const cardBody = document.createElement("div");
+                cardBody.className = "card-body";
+        
+                const title = document.createElement("h2");
+                title.className = "card-title text-primary";
+                title.textContent = room.room_name;
+        
+                const description = document.createElement("p");
+                description.className = "description text-sm text-base-content/80 truncate";
+                description.textContent = room.room_description;
+        
+                const infoContainer = document.createElement("div");
+                infoContainer.className = "mt-2 flex flex-col gap-1";
+        
+                const authorSpan = document.createElement("span");
+                authorSpan.className = "text-sm text-base-content/60";
+                authorSpan.innerHTML = `<span class="font-semibold">Author:</span> `;
+                authorSpan.appendChild(document.createTextNode(room.room_author));
+        
+                const createdSpan = document.createElement("span");
+                createdSpan.className = "text-sm text-base-content/60";
+                createdSpan.innerHTML = `<span class="font-semibold">Created:</span> `;
+                createdSpan.appendChild(document.createTextNode(room.created_at));
+        
+                infoContainer.appendChild(authorSpan);
+                infoContainer.appendChild(createdSpan);
+        
+                const actionsDiv = document.createElement("div");
+                actionsDiv.className = "card-actions justify-end mt-4";
+        
+                if (isAuthenticated && room.room_author_id === currentUserId) {
+                    const removeLink = document.createElement("a");
+                    removeLink.className = "btn btn-sm btn-soft btn-error";
+                    removeLink.href = `/remove-room/${room.id}`;
+                    removeLink.textContent = "Remove";
+                    actionsDiv.appendChild(removeLink);
+            
+                    const editLink = document.createElement("a");
+                    editLink.className = "btn btn-sm btn-soft btn-accent";
+                    editLink.href = `/edit-room/${room.id}`;
+                    editLink.textContent = "Edit";
+                    actionsDiv.appendChild(editLink);
+                }
+        
+                if (isAuthenticated) {
+                    const showMoreLink = document.createElement("a");
+                    showMoreLink.className = "btn btn-sm btn-primary btn-soft";
+                    showMoreLink.href = `/rooms/${room.id}/`;
+                    showMoreLink.textContent = "Show More";
+                    actionsDiv.appendChild(showMoreLink);
+            
+                    const joinLink = document.createElement("a");
+                    joinLink.className = "btn btn-sm btn-secondary btn-soft";
+                    joinLink.href = `/chat_room/${room.id}`;
+                    joinLink.textContent = "Join";
+                    actionsDiv.appendChild(joinLink);
+                }
+        
+                cardBody.appendChild(title);
+                cardBody.appendChild(description);
+                cardBody.appendChild(infoContainer);
+                cardBody.appendChild(actionsDiv);
+        
+                div.appendChild(cardBody);
+        
+                roomsList.prepend(div);
+            }
+        }
+        function handleRoomUpdate(data){
+            const room = data.room;
+            const room_name_div = document.querySelector(`#room-${room.id} .card-body .card-title`)
+            const room_description_div = document.querySelector(`#room-${room.id} .card-body .description`)
+
+
+            room_name_div.textContent = room.room_name
+            room_description_div.textContent = room.room_description
+        }
+        function handleRoomDelete(data){
+            const room = data.room 
+
+
+            const existing = document.getElementById(`room-${room.id}`);
+
+            if (existing) {
+                existing.remove();
+            }
+        }
+        
+        const events = {
+          "room.created" : handleRoomCreate,
+          "room.updated" : handleRoomUpdate,
+          "room.deleted" : handleRoomDelete
+        };
         
         function connectWebSocket() { 
           if (socket && 
@@ -64,106 +169,10 @@
           socket.onmessage = function (e) {
               const data = JSON.parse(e.data);
   
-  
-  
-              if (data.type === "room.created") {
-                  const room = data.room;
-  
-  
-  
-                  if (!document.getElementById(`room-${room.id}`)) {
-                      const div = document.createElement("div");
-                      div.id = `room-${room.id}`;
-                      div.className = "card bg-base-100 shadow-md border border-base-200";
-              
-                      const cardBody = document.createElement("div");
-                      cardBody.className = "card-body";
-              
-                      const title = document.createElement("h2");
-                      title.className = "card-title text-primary";
-                      title.textContent = room.room_name;
-              
-                      const description = document.createElement("p");
-                      description.className = "description text-sm text-base-content/80 truncate";
-                      description.textContent = room.room_description;
-              
-                      const infoContainer = document.createElement("div");
-                      infoContainer.className = "mt-2 flex flex-col gap-1";
-              
-                      const authorSpan = document.createElement("span");
-                      authorSpan.className = "text-sm text-base-content/60";
-                      authorSpan.innerHTML = `<span class="font-semibold">Author:</span> `;
-                      authorSpan.appendChild(document.createTextNode(room.room_author));
-              
-                      const createdSpan = document.createElement("span");
-                      createdSpan.className = "text-sm text-base-content/60";
-                      createdSpan.innerHTML = `<span class="font-semibold">Created:</span> `;
-                      createdSpan.appendChild(document.createTextNode(room.created_at));
-              
-                      infoContainer.appendChild(authorSpan);
-                      infoContainer.appendChild(createdSpan);
-              
-                      const actionsDiv = document.createElement("div");
-                      actionsDiv.className = "card-actions justify-end mt-4";
-              
-                      if (isAuthenticated && room.room_author_id === currentUserId) {
-                          const removeLink = document.createElement("a");
-                          removeLink.className = "btn btn-sm btn-soft btn-error";
-                          removeLink.href = `/remove-room/${room.id}`;
-                          removeLink.textContent = "Remove";
-                          actionsDiv.appendChild(removeLink);
-                  
-                          const editLink = document.createElement("a");
-                          editLink.className = "btn btn-sm btn-soft btn-accent";
-                          editLink.href = `/edit-room/${room.id}`;
-                          editLink.textContent = "Edit";
-                          actionsDiv.appendChild(editLink);
-                      }
-              
-                      if (isAuthenticated) {
-                          const showMoreLink = document.createElement("a");
-                          showMoreLink.className = "btn btn-sm btn-primary btn-soft";
-                          showMoreLink.href = `/rooms/${room.id}/`;
-                          showMoreLink.textContent = "Show More";
-                          actionsDiv.appendChild(showMoreLink);
-                  
-                          const joinLink = document.createElement("a");
-                          joinLink.className = "btn btn-sm btn-secondary btn-soft";
-                          joinLink.href = `/chat_room/${room.id}`;
-                          joinLink.textContent = "Join";
-                          actionsDiv.appendChild(joinLink);
-                      }
-              
-                      cardBody.appendChild(title);
-                      cardBody.appendChild(description);
-                      cardBody.appendChild(infoContainer);
-                      cardBody.appendChild(actionsDiv);
-              
-                      div.appendChild(cardBody);
-              
-                      roomsList.prepend(div);
-                  }
+              if (Object.hasOwn(events, data.type)) {
+                events[data.type](data)
               }
-              else if (data.type === "room.updated"){
   
-                  const room = data.room;
-                  const room_name_div = document.querySelector(`#room-${room.id} .card-body .card-title`)
-                  const room_description_div = document.querySelector(`#room-${room.id} .card-body .description`)
-  
-  
-                  room_name_div.textContent = room.room_name
-                  room_description_div.textContent = room.room_description
-              }
-              else if (data.type == "room.deleted"){
-                  const room = data.room 
-  
-  
-                  const existing = document.getElementById(`room-${room.id}`);
-  
-                  if (existing) {
-                      existing.remove();
-                  }
-              }
           };
 
           
