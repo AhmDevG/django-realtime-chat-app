@@ -1,461 +1,310 @@
-{% extends 'base.html' %} 
+{% extends 'base.html' %}
 
-{% block title %}
-{{ room.room_name }} | ChatApp
-{% endblock %}
+{% block title %}{{ room.room_name }} | ChatApp{% endblock %}
 
 {% block content %}
-<div class="flex h-screen">
-    <div id="main-chat" class="flex-1 flex flex-col">
-        <div class="p-4 border-b border-primary bg-neutral sticky top-0 z-10">
-            <div class="flex items-center justify-between">
-                <div class="flex-1 min-w-0">
-                    <h2
-                        class="text-xl font-bold truncate text-primary room-name"
-                    >
-                        {{ room.room_name }}
-                    </h2>
-                    <p class="text-sm truncate text-primary room-description">
-                        {{ room.room_description }}
-                    </p>
-                </div>
-            </div>
+<style>
+  .chat-page {
+    --chat-bg: #100e0d;
+    --chat-panel: #1b1817;
+    --chat-panel-soft: #211d1b;
+    --chat-border: #393330;
+    --chat-text: #eee9e4;
+    --chat-muted: #9b9691;
+    --chat-accent: #ff9800;
+    background: var(--chat-bg);
+    color: var(--chat-text);
+  }
+  .chat-scrollbar { scrollbar-width: thin; scrollbar-color: #514943 transparent; }
+  .chat-scrollbar::-webkit-scrollbar { width: 7px; }
+  .chat-scrollbar::-webkit-scrollbar-thumb { background: #514943; border-radius: 20px; }
+  .message-actions { opacity: 0; pointer-events: none; transform: translateY(3px); transition: .18s ease; }
+  .message-row:hover .message-actions,
+  .message-row:focus-within .message-actions { opacity: 1; pointer-events: auto; transform: translateY(0); }
+  .chat-bubble { overflow-wrap: anywhere; white-space: pre-wrap; line-height: 1.55; }
+  .chat-sidebar { background: var(--chat-panel); border-color: var(--chat-border); }
+  .chat-input:focus { outline: none; border-color: var(--chat-accent); box-shadow: 0 0 0 2px rgb(255 152 0 / 12%); }
+  .chat-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 10px; color: #aaa39d; transition: .15s ease; }
+  .chat-icon-btn:hover { background: #302925; color: var(--chat-text); }
+  @media (max-width: 767px) {
+    .message-actions { opacity: 1; pointer-events: auto; transform: none; }
+    #sidebar { display: none; position: absolute; z-index: 30; top: 64px; right: 10px; bottom: 10px; width: min(290px, calc(100vw - 20px)); border: 1px solid var(--chat-border); border-radius: 16px; box-shadow: 0 18px 50px rgb(0 0 0 / 45%); }
+    #sidebar.is-open { display: flex; }
+    #members-backdrop.is-open { display: block; }
+  }
+</style>
+
+<div class="chat-page relative flex h-[calc(100dvh-4rem)] min-h-[420px] w-full overflow-hidden">
+  <div id="members-backdrop" onclick="toggleMembers(false)" class="hidden absolute inset-0 z-20 bg-black/50 md:hidden"></div>
+
+  <main id="main-chat" class="flex min-w-0 flex-1 flex-col">
+    <!-- Room header -->
+    <header class="z-10 flex min-h-[68px] items-center justify-between gap-3 border-b border-[#393330] bg-[#1b1817] px-4 py-3 sm:px-6">
+      <div class="flex min-w-0 items-center gap-3">
+        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#393330] bg-[#29231f] text-[#ff9800]">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h8M8 14h5m-8 6 2.2-3.3A8 8 0 1 1 20 14.5"/></svg>
         </div>
-
-        <div
-            id="chat-log"
-            class="flex-1 overflow-y-auto p-4 space-y-4 bg-base-100"
-        >
-            {% for msg in chat_msgs %}
-            <div id="msg-{{ msg.id }}" class="flex items-start gap-3 group">
-                <div class="avatar">
-                    <div class="w-10 rounded-full border-2 border-primary">
-                        <img
-                            src="{{ msg.message_author.profile.url }}"
-                            alt="{{ msg.message_author.username }}"
-                        />
-                    </div>
-                </div>
-                <div class="flex-1 max-w-[80%] relative">
-                    <div class="flex items-center mb-1">
-                        <span
-                            class="font-bold {% if msg.message_author == current_user %}text-primary{% else %}text-white{% endif %}"
-                        >
-                            {{ msg.message_author.username }}
-                        </span>
-                        <time class="text-xs opacity-70 ml-2"
-                            >{{ msg.created_at|date:"H:i" }}</time
-                        >
-                    </div>
-
-                    {% if msg.reply_to %}
-                    <a
-                        href="#msg-{{ msg.reply_to.id }}"
-                        onclick="highlightMessage('msg-{{ msg.reply_to.id }}')"
-                        class="text-xs border-l-4 border-accent pl-2 mb-1 bg-neutral text-white flex items-center"
-                    >
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-3 w-3 mr-1"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M3 10h11M3 6h7m1 12l4-4-4-4"
-                            />
-                        </svg>
-                        <strong
-                            >{{ msg.reply_to.message_author.username }}:</strong
-                        >
-                        <span class="truncate ml-1">{{ msg.reply_to.message_content|truncatechars:40}}</span>
-                    </a>
-                    {% endif %}
-
-                    <div class="relative">
-                        <div
-                            id="message-{{ msg.id }}"
-                            class="chat-bubble {% if msg.message_author == current_user %}chat-bubble-primary{% else %}chat-bubble-natural{% endif %}"
-                        >
-                            {{ msg.message_content }}
-                        </div>
-
-                        <div
-                            class="absolute -top-4 right-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200"
-                        >
-                            <button
-                                onclick="setReply({{ msg.id }}, '{{ msg.message_author.username }}', '{{ msg.message_content|escapejs }}')"
-                                class="btn btn-xs btn-circle btn-ghost hover:bg-primary hover:text-primary-content"
-                                title="Reply"
-                            >
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    class="h-4 w-4"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M3 10h11M3 6h7m1 12l4-4-4-4"
-                                    />
-                                </svg>
-                            </button>
-
-                            {% if msg.message_author == current_user %}
-                            <button
-                                onclick="deleteMessage({{ msg.id }})"
-                                class="btn btn-xs btn-circle btn-ghost hover:bg-error hover:text-error-content"
-                                title="Delete"
-                            >
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    class="h-4 w-4"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M6 18L18 6M6 6l12 12"
-                                    />
-                                </svg>
-                            </button>
-
-                            <button
-                                onclick="enableEdit({{ msg.id }})"
-                                class="btn btn-xs btn-circle btn-ghost hover:bg-warning hover:text-warning-content"
-                                title="Edit"
-                            >
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    class="h-4 w-4"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3z"
-                                    />
-                                </svg>
-                            </button>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-
-            <div id="scroll-anchor"></div>
+        <div class="min-w-0">
+          <h1 class="room-name truncate text-base font-semibold tracking-tight text-[#eee9e4] sm:text-lg">{{ room.room_name }}</h1>
+          <p class="room-description mt-0.5 truncate text-xs text-[#9b9691] sm:text-sm">{{ room.room_description|default:'Room conversation' }}</p>
         </div>
+      </div>
+      <div class="flex shrink-0 items-center gap-2">
+        <span class="hidden items-center gap-1.5 rounded-full border border-[#393330] bg-[#211d1b] px-3 py-1.5 text-xs text-[#aaa39d] sm:inline-flex">
+          <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span> Live room
+        </span>
+        <button type="button" onclick="toggleMembers()" class="inline-flex h-9 items-center gap-2 rounded-lg border border-[#393330] bg-[#211d1b] px-3 text-xs font-medium text-[#ddd5ce] transition hover:border-[#665044] hover:bg-[#2a2420] md:hidden" aria-label="Show online members">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2m16 0v-2a4 4 0 0 0-3-3.87M14 3.13a4 4 0 0 1 0 7.75M14 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z"/></svg>
+          <span id="mobileOnlineCount">0</span>
+        </button>
+      </div>
+    </header>
 
-        <div id="reply-box" class="hidden mx-4 mt-2 mb-1">
-            <div
-                class="flex items-center bg-neutral text-neutral-content rounded-lg p-2 border border-primary shadow-lg"
-            >
-                <div class="flex-1 min-w-0">
-                    <p class="text-xs font-bold truncate">
-                        Replying to
-                        <span class="text-accent" id="reply-user"></span>
-                    </p>
-                    <p
-                        class="text-xs truncate text-secondary"
-                        id="reply-content"
-                    ></p>
-                </div>
-                <button
-                    onclick="clearReply()"
-                    class="btn btn-xs btn-circle btn-ghost hover:bg-error hover:text-error-content"
-                >
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="h-4 w-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M6 18L18 6M6 6l12 12"
-                        />
-                    </svg>
+    <!-- Messages -->
+    <section id="chat-log" aria-label="Chat messages" class="chat-scrollbar min-h-0 flex-1 overflow-y-auto bg-[#100e0d] px-3 py-5 sm:px-6 sm:py-6 lg:px-8">
+      <div class="mx-auto flex w-full max-w-4xl flex-col gap-5">
+        {% for msg in chat_msgs %}
+        <article id="msg-{{ msg.id }}" class="message-row group flex min-w-0 items-start gap-2.5 sm:gap-3">
+          <div class="avatar shrink-0">
+            <div class="h-9 w-9 overflow-hidden rounded-full border border-[#51463e] bg-[#29231f] sm:h-10 sm:w-10">
+              <img src="{{ msg.message_author.profile.url }}" alt="{{ msg.message_author.username }}" class="h-full w-full object-cover" />
+            </div>
+          </div>
+
+          <div class="relative min-w-0 max-w-[calc(100%-3rem)] flex-1 sm:max-w-[82%]">
+            <div class="mb-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+              <span class="text-sm font-semibold {% if msg.message_author == current_user %}text-[#ffad33]{% else %}text-[#e9e2dc]{% endif %}">{{ msg.message_author.username }}</span>
+              <time class="text-[11px] text-[#827a74]">{{ msg.created_at|date:"H:i" }}</time>
+            </div>
+
+            {% if msg.reply_to %}
+            <a href="#msg-{{ msg.reply_to.id }}" onclick="highlightMessage('msg-{{ msg.reply_to.id }}')" class="mb-1.5 flex max-w-full items-center gap-2 rounded-lg border-l-2 border-[#ff9800] bg-[#211d1b] px-3 py-2 text-xs text-[#aaa39d] transition hover:bg-[#29231f]">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 shrink-0 text-[#ffad33]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17 4 12l5-5M4 12h11a5 5 0 0 1 5 5v1"/></svg>
+              <span class="truncate"><strong class="font-semibold text-[#ddd5ce]">{{ msg.reply_to.message_author.username }}</strong> · {{ msg.reply_to.message_content|truncatechars:55 }}</span>
+            </a>
+            {% endif %}
+
+            <div class="relative inline-block max-w-full">
+              <div id="message-{{ msg.id }}" class="chat-bubble rounded-2xl border px-3.5 py-2.5 text-sm shadow-sm sm:px-4 {% if msg.message_author == current_user %}rounded-tl-md border-[#704718] bg-[#392817] text-[#fff0dc]{% else %}rounded-tl-md border-[#393330] bg-[#1d1a18] text-[#e8e1db]{% endif %}">{{ msg.message_content }}</div>
+              <div class="message-actions absolute -top-3 right-1 flex items-center gap-1 rounded-lg border border-[#393330] bg-[#211d1b] p-0.5 shadow-lg">
+                <button type="button" onclick="setReply({{ msg.id }}, '{{ msg.message_author.username|escapejs }}', '{{ msg.message_content|escapejs }}')" class="chat-icon-btn" title="Reply" aria-label="Reply">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17 4 12l5-5M4 12h11a5 5 0 0 1 5 5v1"/></svg>
                 </button>
-            </div>
-        </div>
-
-        <div class="p-4 border-t border-primary bg-neutral sticky bottom-0">
-            <form method="post" class="flex gap-2">
-                {% csrf_token %}
-                <input type="hidden" name="reply_id" id="reply-id" value="" />
-                <input
-                    name="chat_message"
-                    type="text"
-                    placeholder="Type your message..."
-                    class="input input-bordered flex-1 bg-base-100 focus:border-primary focus:ring-2 focus:ring-primary"
-                    autocomplete="off"
-                    autofocus
-                />
-                <button type="submit" class="btn btn-primary gap-2">
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="h-5 w-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M13 5l7 7-7 7M5 5l7 7-7 7"
-                        />
-                    </svg>
-                    Send
+                {% if msg.message_author == current_user %}
+                <button type="button" onclick="enableEdit({{ msg.id }})" class="chat-icon-btn hover:!text-amber-400" title="Edit" aria-label="Edit">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="m15 5 4 4M4 20l4-.8L19 8a2.1 2.1 0 0 0-3-3L5 16l-1 4Z"/></svg>
                 </button>
-            </form>
+                <button type="button" onclick="deleteMessage({{ msg.id }})" class="chat-icon-btn hover:!text-red-400" title="Delete" aria-label="Delete">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16m-10 4v6m4-6v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
+                </button>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </article>
+        {% empty %}
+        <div id="empty-chat" class="flex flex-1 flex-col items-center justify-center py-16 text-center">
+          <div class="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#393330] bg-[#1b1817] text-[#ff9800]">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h8M8 14h5m-9 6 2.2-3.3A8 8 0 1 1 20 14.5"/></svg>
+          </div>
+          <p class="font-medium text-[#e8e1db]">No messages yet</p>
+          <p class="mt-1 text-sm text-[#827a74]">Start the conversation</p>
         </div>
+        {% endfor %}
+        <div id="scroll-anchor" class="h-px"></div>
+      </div>
+    </section>
+
+    <!-- Reply preview -->
+    <div id="reply-box" class="hidden border-t border-[#393330] bg-[#171412] px-3 pt-3 sm:px-6">
+      <div class="mx-auto flex max-w-4xl items-center gap-3 rounded-xl border border-[#493a2d] bg-[#211d1b] px-3 py-2.5">
+        <div class="h-8 w-1 shrink-0 rounded-full bg-[#ff9800]"></div>
+        <div class="min-w-0 flex-1">
+          <p class="text-xs font-semibold text-[#ffad33]">Replying to <span id="reply-user"></span></p>
+          <p id="reply-content" class="mt-0.5 truncate text-xs text-[#9b9691]"></p>
+        </div>
+        <button type="button" onclick="clearReply()" class="chat-icon-btn" aria-label="Cancel reply" title="Cancel reply">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
     </div>
 
-    <div
-        id="sidebar"
-        class="w-60 border-l border-gray-300 bg-dark flex flex-col transition-transform duration-300"
-    >
-        <div class="flex justify-between items-center p-3 border-b">
-            <h2 class="font-bold text-lg">Online Members</h2>
-            <span id="onlineCount" class="badge badge-primary">0</span>
-        </div>
-        <div
-            id="membersList"
-            class="flex-1 overflow-y-auto p-3 space-y-3"
-        ></div>
+    <!-- Composer -->
+    <footer class="border-t border-[#393330] bg-[#1b1817] px-3 py-3 sm:px-6 sm:py-4">
+      <form method="post" class="mx-auto flex w-full max-w-4xl items-end gap-2 sm:gap-3">
+        {% csrf_token %}
+        <input type="hidden" name="reply_id" id="reply-id" value="" />
+        <label class="sr-only" for="chat-message-input">Type your message</label>
+        <input id="chat-message-input" name="chat_message" type="text" placeholder="Write a message..." class="chat-input min-w-0 flex-1 rounded-xl border border-[#393330] bg-[#100e0d] px-4 py-3 text-sm text-[#eee9e4] placeholder:text-[#77706a] transition" autocomplete="off" />
+        <button type="submit" class="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#ff9800] px-4 text-sm font-semibold text-[#21170b] shadow-sm transition hover:bg-[#ffad33] active:scale-[.98]" aria-label="Send message">
+          <span class="hidden sm:inline">Send</span>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m5 12 14-7-4 14-3-6-7-1Zm7 1 7-8"/></svg>
+        </button>
+      </form>
+    </footer>
+  </main>
+
+  <!-- Online members -->
+  <aside id="sidebar" class="chat-sidebar relative flex w-[260px] shrink-0 flex-col border-l">
+    <div class="flex min-h-[68px] items-center justify-between border-b border-[#393330] px-4">
+      <div>
+        <h2 class="text-sm font-semibold text-[#eee9e4]">Online members</h2>
+        <p class="mt-0.5 text-xs text-[#827a74]">People in this room</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <span id="onlineCount" class="rounded-full bg-[#30251a] px-2.5 py-1 text-xs font-semibold text-[#ffad33]">0</span>
+        <button type="button" onclick="toggleMembers(false)" class="chat-icon-btn md:hidden" aria-label="Close members"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 6 12 12M18 6 6 18"/></svg></button>
+      </div>
     </div>
+    <div id="membersList" class="chat-scrollbar flex-1 space-y-2 overflow-y-auto p-3"></div>
+    <div class="border-t border-[#393330] px-4 py-3 text-xs text-[#77706a]">Connected to this room</div>
+  </aside>
 </div>
 
 <script>
-    let replyId = null;
-    let currentEditId = null;
+  let replyId = null;
+  let currentEditId = null;
 
-    const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
-    const ws_url = ws_scheme + "://" + window.location.host + "/ws/room/" + "{{room.id}}/"
-    let socket = null
+  const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
+  const ws_url = ws_scheme + "://" + window.location.host + "/ws/room/" + "{{ room.id }}/";
+  let socket = null;
 
+  function toggleMembers(force) {
+    const sidebar = document.getElementById("sidebar");
+    const backdrop = document.getElementById("members-backdrop");
+    const shouldOpen = typeof force === "boolean" ? force : !sidebar.classList.contains("is-open");
+    sidebar.classList.toggle("is-open", shouldOpen);
+    backdrop.classList.toggle("is-open", shouldOpen);
+  }
 
-    function show_join_message(data){
-      const message = data.message;
-      const chat_log = document.getElementById("chat-log");
-      const div_message = document.createElement("div");
+  function appendRoomNotice(message, type = "normal") {
+    const chatLog = document.getElementById("chat-log");
+    const wrapper = chatLog.querySelector(".mx-auto");
+    const notice = document.createElement("div");
+    notice.className = "my-1 text-center text-xs" + (type === "error" ? " text-red-400" : " text-[#827a74]");
+    notice.textContent = message;
+    wrapper.appendChild(notice);
+    scrollToBottom();
+  }
 
-      // some edit for the design and reset test
-      div_message.className = "text-center text-gray-400";
-      div_message.textContent = message;
+  function show_join_message(data) { appendRoomNotice(data.message); }
+  function show_disconnected_message(data) { appendRoomNotice(data.message, "error"); }
 
-      chat_log.appendChild(div_message);
-    }
-    
-    function show_disconnected_message(data){
-      const message = data.message;
-      const chat_log = document.getElementById("chat-log");
-      const div_message = document.createElement("div");
+  function handleRoomUpdated(data) {
+    const room_name = data.room.room_name;
+    const room_description = data.room.room_description;
+    document.title = `${room_name} | ChatApp`;
+    document.querySelector(".room-name").textContent = room_name;
+    document.querySelector(".room-description").textContent = room_description || "Room conversation";
+  }
 
-      // some edit for the design and reset test
-      div_message.className = "text-center text-red-400";
-      div_message.textContent = message;
+  function handleRoomDeleted() {
+    window.location.href = "/";
+  }
 
-      chat_log.appendChild(div_message);
-    }
-    
-    function handleRoomUpdated(data){
-      const room_name = data.room["room_name"]
-      const room_description = data.room["room_description"]
-      document.title = `${room_name} | ChatApp`
-      document.querySelector(".room-name").textContent = room_name;
-      document.querySelector(".room-description").textContent = room_description;
-    }
+  const events = {
+    "user_connected": show_join_message,
+    "user_disconnected": show_disconnected_message,
+    "room.updated": handleRoomUpdated,
+    "room.deleted": handleRoomDeleted,
+  };
 
-    function handleRoomDeleted(data){
-      window.location.href = "/";
-      alert(`the room has been deleted`);
-    }
-    
-    const events = {
-      "user_connected" : show_join_message,
-      "user_disconnected" : show_disconnected_message,
-      "room.updated" : handleRoomUpdated,
-      "room.deleted" : handleRoomDeleted,
-    }
-    
+  function connectWebSocket() {
+    if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) return;
+    socket = new WebSocket(ws_url);
+    socket.onmessage = function (e) {
+      const data = JSON.parse(e.data);
+      if (Object.hasOwn(events, data.type)) events[data.type](data);
+    };
+    socket.onopen = function () { console.log("WebSocket connected."); };
+    socket.onclose = function () { console.log("WebSocket disconnected."); };
+    socket.onerror = function (err) { console.log(err); };
+  }
 
-    function connectWebSocket() { 
-      if (socket && 
-          (
-            socket.readyState === WebSocket.OPEN ||
-            socket.readyState === WebSocket.CONNECTING
-          ) 
-      ){
-        return;
-      }
+  connectWebSocket();
 
-      socket = new WebSocket(ws_url);
-      socket.onmessage = function (e) {
-          const data = JSON.parse(e.data);
-          console.log(data)
-          
-          if (Object.hasOwn(events , data.type)){
-            events[data.type](data)
-          }
-      }
-      
-      socket.onopen = function () {
-          console.log("WebSocket connected.");
-      };
+  window.addEventListener("pagehide", function () {
+    if (socket) { socket.close(); socket = null; }
+  });
+  window.addEventListener("pageshow", function (event) {
+    if (event.persisted) connectWebSocket();
+  });
 
-      socket.onclose = function () {
-          console.log("WebSocket disconnected.");
-      };
+  function scrollToBottom() {
+    const anchor = document.getElementById("scroll-anchor");
+    if (anchor) anchor.scrollIntoView({ behavior: "instant", block: "end" });
+  }
 
-      socket.onerror = function(err) { 
-        console.log(err)
-      }
-      
-    }
+  function highlightMessage(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add("ring-2", "ring-[#ff9800]/70", "bg-[#392817]");
+    setTimeout(() => el.classList.remove("ring-2", "ring-[#ff9800]/70", "bg-[#392817]"), 1800);
+  }
 
-    connectWebSocket();
+  function setReply(id, username, message) {
+    replyId = id;
+    const displayMsg = message.length > 70 ? message.substring(0, 70) + "..." : message;
+    document.getElementById("reply-id").value = id;
+    document.getElementById("reply-user").textContent = username;
+    document.getElementById("reply-content").textContent = displayMsg;
+    document.getElementById("reply-box").classList.remove("hidden");
+    document.getElementById("chat-message-input").focus();
+  }
 
-      
-    
-    window.addEventListener("pagehide", function () {
-        if (socket) {
-            socket.close();
-            socket = null;
-        }
-    });
-    
-    window.addEventListener("pageshow", function (event) {
-        if (event.persisted) {
-            console.log("Page restored from BFCache.");
-            connectWebSocket();
-        }
-    });
+  function clearReply() {
+    replyId = null;
+    document.getElementById("reply-id").value = "";
+    document.getElementById("reply-user").textContent = "";
+    document.getElementById("reply-content").textContent = "";
+    document.getElementById("reply-box").classList.add("hidden");
+  }
 
-    
+  function deleteMessage(id) {
+    // Keep your existing delete request logic here.
+  }
 
-    function scrollToBottom() {
-        const anchor = document.getElementById("scroll-anchor");
-        if (anchor) {
-            anchor.scrollIntoView({ behavior: "instant" });
-        }
-    }
+  function enableEdit(messageId) {
+    const messageDiv = document.getElementById(`message-${messageId}`);
+    if (!messageDiv || document.querySelector(".edit-input")) return;
+    const oldText = messageDiv.textContent;
+    messageDiv.replaceChildren();
 
-    function highlightMessage(id) {
-        const el = document.getElementById(id);
-        if (!el) return;
+    const input = document.createElement("input");
+    input.type = "text";
+    input.value = oldText;
+    input.className = "edit-input w-full min-w-0 rounded-lg border border-[#704718] bg-[#100e0d] px-3 py-2 text-sm text-[#eee9e4] outline-none";
+    input.id = `edit-input-${messageId}`;
 
-        el.classList.add("animate-pulse", "bg-primary", "bg-opacity-10");
-        setTimeout(() => {
-            el.classList.remove("animate-pulse", "bg-primary", "bg-opacity-10");
-        }, 2000);
-    }
+    const controls = document.createElement("div");
+    controls.className = "mt-2 flex items-center gap-2";
+    const saveBtn = document.createElement("button");
+    saveBtn.type = "button";
+    saveBtn.textContent = "Save";
+    saveBtn.className = "rounded-lg bg-[#ff9800] px-3 py-1.5 text-xs font-semibold text-[#21170b]";
+    saveBtn.onclick = () => submitEdit(messageId, oldText);
+    const cancelBtn = document.createElement("button");
+    cancelBtn.type = "button";
+    cancelBtn.textContent = "Cancel";
+    cancelBtn.className = "rounded-lg border border-[#514943] px-3 py-1.5 text-xs text-[#c8beb5]";
+    cancelBtn.onclick = () => cancelEdit(messageId, oldText);
+    controls.append(saveBtn, cancelBtn);
+    messageDiv.append(input, controls);
+    input.focus();
+    input.select();
+  }
 
-    function setReply(id, username, message) {
-        replyId = id;
-        const maxLength = 50;
-        const displayMsg =
-            message.length > maxLength
-                ? message.substring(0, maxLength) + "..."
-                : message;
+  function cancelEdit(messageId, oldText) {
+    const messageDiv = document.getElementById(`message-${messageId}`);
+    if (messageDiv) messageDiv.textContent = oldText;
+  }
 
-        document.getElementById("reply-id").value = id;
-        document.getElementById("reply-user").textContent = username;
-        document.getElementById("reply-content").textContent = displayMsg;
-        document.getElementById("reply-box").classList.remove("hidden");
-        document.querySelector('input[name="chat_message"]').focus();
-    }
-
-    function clearReply() {
-        replyId = null;
-        document.getElementById("reply-id").value = "";
-        document.getElementById("reply-user").textContent = "";
-        document.getElementById("reply-content").textContent = "";
-        document.getElementById("reply-box").classList.add("hidden");
-    }
-
-    function deleteMessage(id) {
-        // delete message logic
-    }
-
-    function enableEdit(messageId) {
-        const messageDiv = document.getElementById(`message-${messageId}`);
-
-        if (document.querySelector(".edit-input")) {
-            alert("Please finish editing the current message first.");
-            return;
-        }
-
-        const oldText = messageDiv.textContent;
-
-        while (messageDiv.firstChild) {
-            messageDiv.removeChild(messageDiv.firstChild);
-        }
-
-        const input = document.createElement("input");
-        input.type = "text";
-        input.value = oldText;
-        input.className =
-            "input input-bordered input-sm w-full edit-input bg-white";
-        input.id = `edit-input-${messageId}`;
-
-        const saveBtn = document.createElement("button");
-        saveBtn.textContent = "Save";
-        saveBtn.className = "btn btn-xs btn-primary ml-2";
-        saveBtn.onclick = () => submitEdit(messageId, oldText);
-
-        const cancelBtn = document.createElement("button");
-        cancelBtn.textContent = "Cancel";
-        cancelBtn.className = "btn btn-xs btn-ghost ml-1";
-        cancelBtn.onclick = () => cancelEdit(messageId, oldText);
-
-        messageDiv.appendChild(input);
-        messageDiv.appendChild(saveBtn);
-        messageDiv.appendChild(cancelBtn);
-
-        input.focus();
-    }
-
-    function cancelEdit(messageId, oldText) {
-        const messageDiv = document.getElementById(`message-${messageId}`);
-
-        while (messageDiv.firstChild) {
-            messageDiv.removeChild(messageDiv.firstChild);
-        }
-
-        messageDiv.textContent = oldText;
-    }
-
-    window.addEventListener("load", () => {
-        scrollToBottom();
-
-        if (location.hash.startsWith("#msg-")) {
-            highlightMessage(location.hash.substring(1));
-        }
-    });
-
-    window.addEventListener("hashchange", () => {
-        if (location.hash.startsWith("#msg-")) {
-            highlightMessage(location.hash.substring(1));
-        }
-    });
+  window.addEventListener("load", () => {
+    scrollToBottom();
+    if (location.hash.startsWith("#msg-")) highlightMessage(location.hash.substring(1));
+  });
+  window.addEventListener("hashchange", () => {
+    if (location.hash.startsWith("#msg-")) highlightMessage(location.hash.substring(1));
+  });
 </script>
-
 {% endblock %}
