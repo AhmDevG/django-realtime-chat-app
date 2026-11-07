@@ -250,6 +250,82 @@
     let replyId = null;
     let currentEditId = null;
 
+    const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
+    const ws_url = ws_scheme + "://" + window.location.host + "/ws/room/" + "{{room.id}}/"
+    let socket = null
+
+
+    function show_join_message(data){
+      const message = data.message;
+      const chat_log = document.getElementById("chat-log");
+      const div_message = document.createElement("div");
+
+      // some edit for the design and reset test
+      div_message.className = "text-center text-gray-400";
+      div_message.textContent = message;
+
+      chat_log.appendChild(div_message);
+    }
+    
+    const events = {
+      "user_connected" : show_join_message
+    }
+    
+
+    function connectWebSocket() { 
+      if (socket && 
+          (
+            socket.readyState === WebSocket.OPEN ||
+            socket.readyState === WebSocket.CONNECTING
+          ) 
+      ){
+        return;
+      }
+
+      socket = new WebSocket(ws_url);
+      socket.onmessage = function (e) {
+          const data = JSON.parse(e.data);
+          console.log(data)
+          
+          if (Object.hasOwn(events , data.type)){
+            events[data.type](data)
+          }
+      }
+      
+      socket.onopen = function () {
+          console.log("WebSocket connected.");
+      };
+
+      socket.onclose = function () {
+          console.log("WebSocket disconnected.");
+      };
+
+      socket.onerror = function(err) { 
+        console.log(err)
+      }
+      
+    }
+
+    connectWebSocket();
+
+      
+    
+    window.addEventListener("pagehide", function () {
+        if (socket) {
+            socket.close();
+            socket = null;
+        }
+    });
+    
+    window.addEventListener("pageshow", function (event) {
+        if (event.persisted) {
+            console.log("Page restored from BFCache.");
+            connectWebSocket();
+        }
+    });
+
+    
+
     function scrollToBottom() {
         const anchor = document.getElementById("scroll-anchor");
         if (anchor) {
