@@ -1,8 +1,10 @@
 import datetime
 import json
-
+from collections import defaultdict
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
+
+active_users = defaultdict(dict) # we gonna use redis later
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -19,41 +21,56 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_add(self.room_name, self.channel_name)
         await self.accept()
 
-        
+        active_users[self.room_name][self.user.id] = {
+            "id": self.user.id,
+            "username": self.user.username,
+            "profile": self.user.profile.url,
+        }
         await self.channel_layer.group_send(self.room_name , 
             {
                 "type" : "user.joined",
                 "message" : f"{self.user.username} joined the room.",
-                "self_channel_name" : self.channel_name, 
+                "users" : list(active_users[self.room_name].values()),
             }
         )
+
+
+        
 
 
 
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(self.room_name, self.channel_name)
+        
+        room_users = active_users.get(self.room_name , {})
+        room_users.pop(self.user.id , None)
+
+        if not room_users:
+            active_users.pop(self.room_name , None)
+        
         try : 
             await self.channel_layer.group_send(self.room_name , 
                 {
                     "type" : "user.disconnect",
                     "message" : f"{self.user.username} disconnected from the room.",
+                    "users" : list(room_users.values()),
                 }
             )
-        except: 
-            print("failed to broadcast the message maybe the room is closed...")
+        except Exception as e: 
+            print(f"failed to broadcast the message maybe the room is closed... {e}")
 
     async def user_joined(self, event):
-        # send to whole group except self
-        if self.channel_name != event["self_channel_name"]:
-            await self.send(text_data=json.dumps({
-                "type" : "user_connected" , 
-                "message": event["message"]
-            }))
+        await self.send(text_data=json.dumps({
+            "type": "user_connected",
+            "message": event["message"],
+            "users": event["users"],
+        }))
 
     async def user_disconnect(self, event):
         await self.send(text_data=json.dumps({
             "type" : "user_disconnected" , 
-            "message": event["message"]
+            "message": event["message"],
+            "users": event["users"],
         }))
 
         
