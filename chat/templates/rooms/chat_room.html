@@ -85,7 +85,15 @@
             {% endif %}
 
             <div class="relative inline-block max-w-full">
-              <div id="message-{{ msg.id }}" class="chat-bubble rounded-2xl border px-3.5 py-2.5 text-sm shadow-sm sm:px-4 {% if msg.message_author == current_user %}rounded-tl-md border-[#704718] bg-[#392817] text-[#fff0dc]{% else %}rounded-tl-md border-[#393330] bg-[#1d1a18] text-[#e8e1db]{% endif %}">{{ msg.message_content }}</div>
+                <div
+                    id="message-{{ msg.id }}"
+                    class="message-bubble inline-block w-fit min-w-[44px] max-w-full rounded-2xl border px-3.5 py-2.5 text-sm shadow-sm whitespace-pre-wrap break-normal [overflow-wrap:anywhere] sm:px-4
+                    {% if msg.message_author == current_user %}
+                        rounded-tl-md border-[#704718] bg-[#392817] text-[#fff0dc]
+                    {% else %}
+                        rounded-tl-md border-[#393330] bg-[#1d1a18] text-[#e8e1db]
+                    {% endif %}"
+                >{{ msg.message_content }}</div>
               <div class="message-actions absolute -top-3 right-1 flex items-center gap-1 rounded-lg border border-[#393330] bg-[#211d1b] p-0.5 shadow-lg">
                 <button type="button" onclick="setReply({{ msg.id }}, '{{ msg.message_author.username|escapejs }}', '{{ msg.message_content|escapejs }}')" class="chat-icon-btn" title="Reply" aria-label="Reply">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17 4 12l5-5M4 12h11a5 5 0 0 1 5 5v1"/></svg>
