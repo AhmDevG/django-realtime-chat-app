@@ -15,11 +15,11 @@
 
 ## ✨ Features
 
-- **Real-Time Messaging** — Instant communication using WebSockets.
-- **Authentication** — User authentication and account management.
-- **Chat Rooms** — Real-time chat room creation and management.
-- **Message History** — Access previous conversations.
-- **Profile Management** — Edit and manage your profile.
+- [] **Real-Time Messaging** — Instant communication using WebSockets. 
+- [x] **Authentication** — User authentication and account management.
+- [x] **Chat Rooms** — Real-time chat room creation and management. 
+- [] **Message History** — Access previous conversations.
+- [x] **Profile Management** — Edit and manage your profile.
 
 ## 🛠️ Tech Stack
 
