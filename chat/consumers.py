@@ -134,5 +134,3 @@ class RoomConsumer(AsyncWebsocketConsumer):
                 }
             )
         )
-
-        await self.close(code=4004)
