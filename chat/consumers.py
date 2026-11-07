@@ -32,12 +32,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(self.room_name, self.channel_name)
-        await self.channel_layer.group_send(self.room_name , 
-            {
-                "type" : "user.disconnect",
-                "message" : f"{self.user.username} disconnected from the room.",
-            }
-        )
+        try : 
+            await self.channel_layer.group_send(self.room_name , 
+                {
+                    "type" : "user.disconnect",
+                    "message" : f"{self.user.username} disconnected from the room.",
+                }
+            )
+        except: 
+            print("failed to broadcast the message maybe the room is closed...")
 
     async def user_joined(self, event):
         # send to whole group except self
@@ -52,6 +55,31 @@ class ChatConsumer(AsyncWebsocketConsumer):
             "type" : "user_disconnected" , 
             "message": event["message"]
         }))
+
+        
+    async def room_updated(self, event):
+        room = event["room"]
+        await self.send(
+            text_data=json.dumps(
+                {
+                    "type": "room.updated",
+                    "room": room,
+                }
+            )
+        )
+        
+    async def room_deleted(self, event):
+        room = event["room"]
+        await self.send(
+            text_data=json.dumps(
+                {
+                    "type": "room.deleted",
+                    "room": room,
+                }
+            )
+        )
+
+        await self.close(code=4004)
 
         
 
@@ -106,3 +134,5 @@ class RoomConsumer(AsyncWebsocketConsumer):
                 }
             )
         )
+
+        await self.close(code=4004)

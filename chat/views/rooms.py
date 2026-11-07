@@ -5,8 +5,27 @@ from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.urls import reverse_lazy 
 from django.contrib import messages
+from django.db import transaction
 from django.shortcuts import redirect  , get_object_or_404
 
+
+def broadcast_room_event(event_type, room_data, notify_chat=False):
+    channel_layer = get_channel_layer()
+
+    event = {
+        "type": event_type,
+        "room": room_data,
+    }
+
+    # Update the rooms list
+    async_to_sync(channel_layer.group_send)("rooms", event)
+
+    # Notify users currently inside this room
+    if notify_chat:
+        async_to_sync(channel_layer.group_send)(
+            f"room_{room_data['id']}",
+            event
+        )
 
 class RoomDetailView(LoginRequiredMixin , DetailView):
     model = Room
@@ -39,12 +58,11 @@ class RoomCreateView(LoginRequiredMixin , CreateView):
             "created_at": self.object.created_at.strftime("%Y-%m-%d %H:%M"),
             "room_author_id": self.object.room_author.id,
         }
-        async_to_sync(channel_layer.group_send)(
-            "rooms",
-            {
-                "type": "room.created",
-                "room": room_data,
-            }
+        transaction.on_commit(
+            lambda: broadcast_room_event(
+                "room.created",
+                room_data
+            )
         )
         return response
 
@@ -71,7 +89,6 @@ class RoomUpdateView(LoginRequiredMixin , UpdateView):
         form.instance.room_author = self.request.user
         response = super().form_valid(form)
 
-        channel_layer = get_channel_layer()
         room_data = {
             "id": self.object.id,
             "room_name": self.object.room_name,
@@ -79,12 +96,12 @@ class RoomUpdateView(LoginRequiredMixin , UpdateView):
             "room_author": self.object.room_author.username,
             "created_at": self.object.created_at.strftime("%Y-%m-%d %H:%M"),
         }
-        async_to_sync(channel_layer.group_send)(
-            "rooms",
-            {
-                "type": "room.updated",
-                "room": room_data,
-            }
+        transaction.on_commit(
+            lambda: broadcast_room_event(
+                "room.updated",
+                room_data,
+                notify_chat=True
+            )
         )
         return response
 
@@ -109,15 +126,16 @@ class RoomDeleteView(LoginRequiredMixin, DeleteView):
         room_id = self.object.id 
         response = super().post(request, *args, **kwargs)
 
-        channel_layer = get_channel_layer()
-        async_to_sync(channel_layer.group_send)(
-            "rooms",
-            {
-                "type": "room.deleted",
-                "room": {
-                    "id": room_id
-                }
-            }
+        room_data = {
+            "id": room_id
+        }
+
+        transaction.on_commit(
+            lambda: broadcast_room_event(
+                "room.deleted",
+                room_data,
+                notify_chat=True
+            )
         )
 
         return response

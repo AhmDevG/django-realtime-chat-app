@@ -279,10 +279,24 @@
       chat_log.appendChild(div_message);
     }
     
+    function handleRoomUpdated(data){
+      const room_name = data.room["room_name"]
+      const room_description = data.room["room_description"]
+      document.title = `${room_name} | ChatApp`
+      document.querySelector(".room-name").textContent = room_name;
+      document.querySelector(".room-description").textContent = room_description;
+    }
+
+    function handleRoomDeleted(data){
+      window.location.href = "/";
+      alert(`the room has been deleted`);
+    }
     
     const events = {
       "user_connected" : show_join_message,
       "user_disconnected" : show_disconnected_message,
+      "room.updated" : handleRoomUpdated,
+      "room.deleted" : handleRoomDeleted,
     }
     
 
