@@ -48,7 +48,7 @@
 
         const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
         const ws_url = ws_scheme + "://" + window.location.host + "/ws/rooms/"
-        const socket = null
+        let socket = null
         
         function connectWebSocket() { 
           if (socket && 
