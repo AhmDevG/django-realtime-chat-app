@@ -71,10 +71,7 @@
                         <strong
                             >{{ msg.reply_to.message_author.username }}:</strong
                         >
-                        <span class="truncate ml-1"
-                            >{{ msg.reply_to.message_content|truncatechars:40
-                            }}</span
-                        >
+                        <span class="truncate ml-1">{{ msg.reply_to.message_content|truncatechars:40}}</span>
                     </a>
                     {% endif %}
 
