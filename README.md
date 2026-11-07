@@ -149,3 +149,8 @@ The application will be available at:
 This project is licensed under the **MIT License**.
 
 See the [LICENSE](LICENSE) file for details.
+
+> [!WARNING]
+> **Work in Progress:** This project is still under active development and is not considered production-ready.
+>
+> It may contain bugs, incomplete features, and potential security vulnerabilities. Use it for development and testing purposes only. Do not deploy it in a production environment until it has been properly reviewed and secured.
