@@ -28,6 +28,17 @@ class ChatConsumer(AsyncWebsocketConsumer):
             }
         )
 
+
+
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard(self.room_name, self.channel_name)
+        await self.channel_layer.group_send(self.room_name , 
+            {
+                "type" : "user.disconnect",
+                "message" : f"{self.user.username} disconnected from the room.",
+            }
+        )
+
     async def user_joined(self, event):
         # send to whole group except self
         if self.channel_name != event["self_channel_name"]:
@@ -36,9 +47,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 "message": event["message"]
             }))
 
+    async def user_disconnect(self, event):
+        await self.send(text_data=json.dumps({
+            "type" : "user_disconnected" , 
+            "message": event["message"]
+        }))
 
-    async def disconnect(self, close_code):
-        await self.channel_layer.group_discard(self.room_name, self.channel_name)
+        
 
 class RoomConsumer(AsyncWebsocketConsumer):
     async def connect(self):

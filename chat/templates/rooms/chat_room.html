@@ -267,8 +267,22 @@
       chat_log.appendChild(div_message);
     }
     
+    function show_disconnected_message(data){
+      const message = data.message;
+      const chat_log = document.getElementById("chat-log");
+      const div_message = document.createElement("div");
+
+      // some edit for the design and reset test
+      div_message.className = "text-center text-red-400";
+      div_message.textContent = message;
+
+      chat_log.appendChild(div_message);
+    }
+    
+    
     const events = {
-      "user_connected" : show_join_message
+      "user_connected" : show_join_message,
+      "user_disconnected" : show_disconnected_message,
     }
     
 
