@@ -161,7 +161,6 @@
       </div>
       <div class="flex items-center gap-2">
         <span id="onlineCount" class="rounded-full bg-[#30251a] px-2.5 py-1 text-xs font-semibold text-[#ffad33]">0</span>
-        <button type="button" onclick="toggleMembers(false)" class="chat-icon-btn md:hidden" aria-label="Close members"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 6 12 12M18 6 6 18"/></svg></button>
       </div>
     </div>
     <div id="membersList" class="flex-1 overflow-y-auto p-3 space-y-2"></div>
@@ -177,13 +176,6 @@
   const ws_url = ws_scheme + "://" + window.location.host + "/ws/room/" + "{{ room.id }}/";
   let socket = null;
 
-  function toggleMembers(force) {
-    const sidebar = document.getElementById("sidebar");
-    const backdrop = document.getElementById("members-backdrop");
-    const shouldOpen = typeof force === "boolean" ? force : !sidebar.classList.contains("is-open");
-    sidebar.classList.toggle("is-open", shouldOpen);
-    backdrop.classList.toggle("is-open", shouldOpen);
-  }
 
   function appendRoomNotice(message, type = "normal") {
     const chatLog = document.getElementById("chat-log");
@@ -198,10 +190,16 @@
   function appendUsersToSideBar(data) {
       const users = data.users;
       const membersList = document.getElementById("membersList");
-  
+      const onlineCount = document.getElementById("onlineCount")
+      
       // Clear previous users
       membersList.innerHTML = "";
-  
+
+
+      // set the count
+      onlineCount.textContent = users.length;
+      
+      
       users.forEach(user => {
           const link = document.createElement("a");
           link.id = `user-${user.id}`;
