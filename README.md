@@ -137,6 +137,18 @@ The application will be available at:
     <td>
       <img src="https://github.com/user-attachments/assets/810203f6-2f6e-4424-96a4-bce0efaf4563" alt="Application Screenshot 10" width="100%" />
     </td>
+
+  </tr>
+  <tr>
+    <td>
+       <img alt="image" src="https://github.com/user-attachments/assets/2a304bd0-c107-4bad-b5eb-4e2ee52c100c" width="100%" />
+    </td>
+    <td>
+        <img alt="image" src="https://github.com/user-attachments/assets/74fe97d7-f0d7-46e3-bc4b-57b90f036234" width="100%" />
+    </td>
+    <td>
+        <img alt="image" src="https://github.com/user-attachments/assets/51654311-2d41-4000-87ff-7345331d3104" width="100%" />
+    </td>
   </tr>
 </table>
 
