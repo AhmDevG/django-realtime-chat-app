@@ -124,7 +124,7 @@ The application will be available at:
   </tr>
   <tr>
     <td>
-      <img src="https://github.com/user-attachments/assets/9b5af0fe-49e4-469b-8af8-8ab4503b7b1d" alt="Application Screenshot 7" width="100%" />
+      <img src="https://github.com/user-attachments/assets/3e279dba-084e-4655-a590-f1820830f22c" alt="Application Screenshot 9" width="100%" />
     </td>
     <td>
       <img src="https://github.com/user-attachments/assets/8ade5d0a-82d5-4a45-a6c6-ce00e0920155" alt="Application Screenshot 8" width="100%" />
@@ -132,24 +132,18 @@ The application will be available at:
   </tr>
   <tr>
     <td>
-      <img src="https://github.com/user-attachments/assets/3e279dba-084e-4655-a590-f1820830f22c" alt="Application Screenshot 9" width="100%" />
-    </td>
-    <td>
       <img src="https://github.com/user-attachments/assets/810203f6-2f6e-4424-96a4-bce0efaf4563" alt="Application Screenshot 10" width="100%" />
     </td>
-
-  </tr>
-  <tr>
     <td>
        <img alt="image" src="https://github.com/user-attachments/assets/2a304bd0-c107-4bad-b5eb-4e2ee52c100c" width="100%" />
-    </td>
-    <td>
-        <img alt="image" src="https://github.com/user-attachments/assets/74fe97d7-f0d7-46e3-bc4b-57b90f036234" width="100%" />
     </td>
   </tr>
   <tr>
     <td>
         <img alt="image" src="https://github.com/user-attachments/assets/51654311-2d41-4000-87ff-7345331d3104" width="100%" />
+    </td>
+    <td>
+        <img alt="image" src="https://github.com/user-attachments/assets/74fe97d7-f0d7-46e3-bc4b-57b90f036234" width="100%" />
     </td>
   </tr>
 </table>
