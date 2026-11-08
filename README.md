@@ -146,6 +146,8 @@ The application will be available at:
     <td>
         <img alt="image" src="https://github.com/user-attachments/assets/74fe97d7-f0d7-46e3-bc4b-57b90f036234" width="100%" />
     </td>
+  </tr>
+  <tr>
     <td>
         <img alt="image" src="https://github.com/user-attachments/assets/51654311-2d41-4000-87ff-7345331d3104" width="100%" />
     </td>
