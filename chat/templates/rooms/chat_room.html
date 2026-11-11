@@ -139,12 +139,12 @@
 
     <!-- Composer -->
     <footer class="border-t border-[#393330] bg-[#1b1817] px-3 py-3 sm:px-6 sm:py-4">
-      <form method="post" class="mx-auto flex w-full max-w-4xl items-end gap-2 sm:gap-3">
+      <form method="post" class="mx-auto flex w-full max-w-4xl items-end gap-2 sm:gap-3" id="message-form">
         {% csrf_token %}
         <input type="hidden" name="reply_id" id="reply-id" value="" />
         <label class="sr-only" for="chat-message-input">Type your message</label>
-        <input id="chat-message-input" name="chat_message" type="text" placeholder="Write a message..." class="chat-input min-w-0 flex-1 rounded-xl border border-[#393330] bg-[#100e0d] px-4 py-3 text-sm text-[#eee9e4] placeholder:text-[#77706a] transition" autocomplete="off" />
-        <button type="submit" class="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#ff9800] px-4 text-sm font-semibold text-[#21170b] shadow-sm transition hover:bg-[#ffad33] active:scale-[.98]" aria-label="Send message">
+        <input id="messageInput" name="message_content" type="text" placeholder="Write a message..." class="chat-input min-w-0 flex-1 rounded-xl border border-[#393330] bg-[#100e0d] px-4 py-3 text-sm text-[#eee9e4] placeholder:text-[#77706a] transition" autocomplete="off" maxlength="4000" />
+        <button type="submit" class="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#ff9800] px-4 text-sm font-semibold text-[#21170b] shadow-sm transition hover:bg-[#ffad33] active:scale-[.98]" aria-label="Send message" id="msg-send-btn">
           <span class="hidden sm:inline">Send</span>
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m5 12 14-7-4 14-3-6-7-1Zm7 1 7-8"/></svg>
         </button>
@@ -172,9 +172,17 @@
   let replyId = null;
   let currentEditId = null;
 
+  const room_id = "{{room.id}}"
   const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
-  const ws_url = ws_scheme + "://" + window.location.host + "/ws/room/" + "{{ room.id }}/";
+  const ws_url = ws_scheme + "://" + window.location.host + "/ws/room/" + `${room_id}/`;
   let socket = null;
+
+  const input = document.getElementById("messageInput");
+  const form = document.getElementById("message-form");
+
+
+
+
 
 
   function appendRoomNotice(message, type = "normal") {
@@ -191,15 +199,15 @@
       const users = data.users;
       const membersList = document.getElementById("membersList");
       const onlineCount = document.getElementById("onlineCount")
-      
+
       // Clear previous users
       membersList.innerHTML = "";
 
 
       // set the count
       onlineCount.textContent = users.length;
-      
-      
+
+
       users.forEach(user => {
           const link = document.createElement("a");
           link.id = `user-${user.id}`;
@@ -210,17 +218,17 @@
               hover:border-[#393330] hover:bg-[#1d1a18]
               transition-colors group
           `;
-  
+
           // Avatar container
           const avatarContainer = document.createElement("div");
           avatarContainer.className = "relative shrink-0";
-  
+
           // Profile image
           const avatar = document.createElement("img");
           avatar.src = user.profile;
           avatar.alt = user.username;
           avatar.className = "w-10 h-10 rounded-full object-cover";
-  
+
           // Online indicator
           const onlineIndicator = document.createElement("span");
           onlineIndicator.className = `
@@ -228,11 +236,11 @@
               rounded-full bg-green-500
               border-2 border-[#171412]
           `;
-  
+
           // Username
           const userInfo = document.createElement("div");
           userInfo.className = "min-w-0 flex-1";
-  
+
           const username = document.createElement("p");
           username.textContent = user.username;
           username.className = `
@@ -240,27 +248,27 @@
               truncate group-hover:text-[#ffad42]
               transition-colors
           `;
-  
+
           avatarContainer.appendChild(avatar);
           avatarContainer.appendChild(onlineIndicator);
-  
+
           userInfo.appendChild(username);
-  
+
           link.appendChild(avatarContainer);
           link.appendChild(userInfo);
-  
+
           membersList.appendChild(link);
       });
   }
 
-  
-  function handle_user_join(data) { 
-    appendRoomNotice(data.message); 
+
+  function handle_user_join(data) {
+    appendRoomNotice(data.message);
     appendUsersToSideBar(data)
   }
-  function show_disconnected_message(data) { 
+  function show_disconnected_message(data) {
     appendUsersToSideBar(data);
-    appendRoomNotice(data.message, "error"); 
+    appendRoomNotice(data.message, "error");
   }
 
   function handleRoomUpdated(data) {
@@ -275,11 +283,136 @@
     window.location.href = "/";
   }
 
+  // TODO : handle the reply style
+  function handleMessageCreation(data) {
+      const message = data.message;
+      const author = message.author;
+      const isCurrentUser = Number(author.user_id) === Number("{{ request.user.id }}");
+
+      const chatLog = document.getElementById("chat-log");
+      const container = chatLog.firstElementChild;
+      const scrollAnchor = document.getElementById("scroll-anchor");
+
+      document.getElementById("empty-chat")?.remove();
+
+      const article = document.createElement("article");
+      article.id = `msg-${message.id}`;
+      article.className = "message-row group flex min-w-0 items-start gap-2.5 sm:gap-3";
+
+      const avatar = document.createElement("div");
+      avatar.className = "avatar shrink-0";
+
+      const avatarWrapper = document.createElement("div");
+      avatarWrapper.className = "h-9 w-9 overflow-hidden rounded-full border border-[#51463e] bg-[#29231f] sm:h-10 sm:w-10";
+
+      const img = document.createElement("img");
+      img.src = author.profile;
+      img.alt = author.username;
+      img.className = "h-full w-full object-cover";
+
+      avatarWrapper.appendChild(img);
+      avatar.appendChild(avatarWrapper);
+
+      const content = document.createElement("div");
+      content.className = "relative min-w-0 max-w-[calc(100%-3rem)] flex-1 sm:max-w-[82%]";
+
+      const header = document.createElement("div");
+      header.className = "mb-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5";
+
+      const username = document.createElement("span");
+      username.className = `text-sm font-semibold ${isCurrentUser ? "text-[#ffad33]" : "text-[#e9e2dc]"}`;
+      username.textContent = author.username;
+
+      const time = document.createElement("time");
+      time.className = "text-[11px] text-[#827a74]";
+      time.textContent = message.created_at || "";
+
+      header.appendChild(username);
+      header.appendChild(time);
+
+      const bubbleWrapper = document.createElement("div");
+      bubbleWrapper.className = "relative inline-block max-w-full";
+
+      const bubble = document.createElement("div");
+      bubble.id = `message-${message.id}`;
+      bubble.className = `message-bubble inline-block w-fit min-w-[44px] max-w-full rounded-2xl border px-3.5 py-2.5 text-sm shadow-sm whitespace-pre-wrap break-normal [overflow-wrap:anywhere] sm:px-4 rounded-tl-md ${
+          isCurrentUser
+              ? "border-[#704718] bg-[#392817] text-[#fff0dc]"
+              : "border-[#393330] bg-[#1d1a18] text-[#e8e1db]"
+      }`;
+      bubble.textContent = message.content;
+
+      const actions = document.createElement("div");
+      actions.className = "message-actions absolute -top-3 right-1 flex items-center gap-1 rounded-lg border border-[#393330] bg-[#211d1b] p-0.5 shadow-lg";
+
+      function createAction(path, title, callback, extraClass = "") {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = `chat-icon-btn ${extraClass}`;
+          button.title = title;
+          button.setAttribute("aria-label", title);
+          button.addEventListener("click", callback);
+
+          const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+          svg.setAttribute("class", "h-4 w-4");
+          svg.setAttribute("viewBox", "0 0 24 24");
+          svg.setAttribute("fill", "none");
+          svg.setAttribute("stroke", "currentColor");
+          svg.setAttribute("stroke-width", "1.8");
+
+          const pathElement = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          pathElement.setAttribute("stroke-linecap", "round");
+          pathElement.setAttribute("stroke-linejoin", "round");
+          pathElement.setAttribute("d", path);
+
+          svg.appendChild(pathElement);
+          button.appendChild(svg);
+
+          return button;
+      }
+
+      actions.appendChild(createAction(
+          "M9 17 4 12l5-5M4 12h11a5 5 0 0 1 5 5v1",
+          "Reply",
+          () => setReply(message.id, author.username, message.content)
+      ));
+
+      if (isCurrentUser) {
+          actions.appendChild(createAction(
+              "m15 5 4 4M4 20l4-.8L19 8a2.1 2.1 0 0 0-3-3L5 16l-1 4Z",
+              "Edit",
+              () => enableEdit(message.id),
+              "hover:!text-amber-400"
+          ));
+
+          actions.appendChild(createAction(
+              "M4 7h16m-10 4v6m4-6v6M6 7l1 13h10l1-13M9 7V4h6v3",
+              "Delete",
+              () => deleteMessage(message.id),
+              "hover:!text-red-400"
+          ));
+      }
+
+      bubbleWrapper.appendChild(bubble);
+      bubbleWrapper.appendChild(actions);
+
+      content.appendChild(header);
+      content.appendChild(bubbleWrapper);
+
+      article.appendChild(avatar);
+      article.appendChild(content);
+
+      container.insertBefore(article, scrollAnchor);
+
+      chatLog.scrollTop = chatLog.scrollHeight;
+  }
+
   const events = {
     "user_connected": handle_user_join,
     "user_disconnected": show_disconnected_message,
     "room.updated": handleRoomUpdated,
     "room.deleted": handleRoomDeleted,
+    "message.created" : handleMessageCreation
   };
 
   function connectWebSocket() {
@@ -295,6 +428,36 @@
   }
 
   connectWebSocket();
+
+  // TODO : send a reply message if there is one
+  // TODO : use Notification API for sending notifications
+  form.addEventListener("submit" , (e) => {
+    e.preventDefault();
+
+    const content = input.value.trim();
+
+    if(!content) return;
+
+    const user = {
+      "username" : "{{request.user.username}}",
+      "profile" : "{{request.user.profile.url}}",
+      "user_id" : "{{request.user.id}}",
+    }
+
+
+
+    // TODO : handle reply message websocket send.
+    socket.send(JSON.stringify({
+      "type" : "message.created",
+      "message" : {
+        "content" : content,
+        "author" : user
+      }
+    }))
+
+    input.value = "";
+  })
+
 
   window.addEventListener("pagehide", function () {
     if (socket) { socket.close(); socket = null; }

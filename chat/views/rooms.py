@@ -3,10 +3,12 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import DetailView , ListView  , CreateView , UpdateView , DeleteView
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
-from django.urls import reverse_lazy 
+from django.urls import reverse_lazy
 from django.contrib import messages
 from django.db import transaction
 from django.shortcuts import redirect  , get_object_or_404
+from django.http import JsonResponse
+
 
 
 def broadcast_room_event(event_type, room_data, notify_chat=False):
@@ -81,7 +83,7 @@ class RoomUpdateView(LoginRequiredMixin , UpdateView):
             return redirect('index')
 
         response = super().dispatch(request, *args, **kwargs)
-        
+
         return response
 
 
@@ -123,7 +125,7 @@ class RoomDeleteView(LoginRequiredMixin, DeleteView):
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
-        room_id = self.object.id 
+        room_id = self.object.id
         response = super().post(request, *args, **kwargs)
 
         room_data = {

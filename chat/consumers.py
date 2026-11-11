@@ -4,20 +4,22 @@ from collections import defaultdict
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 
+from chat.models import Message, Room
+
 active_users = defaultdict(dict) # we gonna use redis later
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.user = self.scope["user"]
 
-        if not self.user.is_authenticated : 
+        if not self.user.is_authenticated :
             await self.close()
             return
 
+        self.room_id = self.scope['url_route']['kwargs']['room_id']
+        self.room_name = f"room_{self.room_id}"
 
-        self.room_name = f"room_{self.scope['url_route']['kwargs']['room_id']}"
-        
-        
+
         await self.channel_layer.group_add(self.room_name, self.channel_name)
         await self.accept()
 
@@ -26,7 +28,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             "username": self.user.username,
             "profile": self.user.profile.url,
         }
-        await self.channel_layer.group_send(self.room_name , 
+        await self.channel_layer.group_send(self.room_name ,
             {
                 "type" : "user.joined",
                 "message" : f"{self.user.username} joined the room.",
@@ -35,29 +37,63 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
 
 
-        
-
-
-
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(self.room_name, self.channel_name)
-        
+
         room_users = active_users.get(self.room_name , {})
         room_users.pop(self.user.id , None)
 
         if not room_users:
             active_users.pop(self.room_name , None)
-        
-        try : 
-            await self.channel_layer.group_send(self.room_name , 
+
+        try :
+            await self.channel_layer.group_send(self.room_name ,
                 {
                     "type" : "user.disconnect",
                     "message" : f"{self.user.username} disconnected from the room.",
                     "users" : list(room_users.values()),
                 }
             )
-        except Exception as e: 
+        except Exception as e:
             print(f"failed to broadcast the message maybe the room is closed... {e}")
+
+
+    # TODO : handle if there is a reply message.
+    @database_sync_to_async
+    def create_message(self, content):
+        message = Message.objects.create(
+            message_author=self.user,
+            room_id=self.room_id,
+            message_content=content
+        )
+
+        return {
+            "id": message.id,
+            "content": message.message_content,
+            "author": {
+                "username": message.message_author.username,
+                "profile": message.message_author.profile.url,
+                "user_id": message.message_author.id,
+            }
+        }
+
+
+    async def receive(self , text_data):
+        data = json.loads(text_data)
+
+        if data.get("type") == "message.created":
+            content = data["message"]["content"].strip()
+
+            if not content :
+                return
+
+            message = await self.create_message(content)
+            await self.channel_layer.group_send(self.room_name , {
+                "type" : "message.created",
+                "message": message,
+            })
+
+
 
     async def user_joined(self, event):
         await self.send(text_data=json.dumps({
@@ -68,12 +104,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def user_disconnect(self, event):
         await self.send(text_data=json.dumps({
-            "type" : "user_disconnected" , 
+            "type" : "user_disconnected" ,
             "message": event["message"],
             "users": event["users"],
         }))
 
-        
+
     async def room_updated(self, event):
         room = event["room"]
         await self.send(
@@ -84,7 +120,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 }
             )
         )
-        
+
     async def room_deleted(self, event):
         room = event["room"]
         await self.send(
@@ -98,18 +134,27 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         await self.close(code=4004)
 
-        
+    async def message_created(self , event):
+        message = event["message"]
+        await self.send(
+            text_data = json.dumps({
+                "type" : "message.created",
+                "message" : message,
+            })
+        )
+
+
 
 class RoomConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.user = self.scope["user"]
 
-        if not self.user.is_authenticated : 
+        if not self.user.is_authenticated :
             await self.close()
             return
-        
 
-        
+
+
         await self.channel_layer.group_add("rooms", self.channel_name)
         await self.accept()
 
