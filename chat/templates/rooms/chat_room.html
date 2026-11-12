@@ -78,7 +78,7 @@
             </div>
 
             {% if msg.reply_to %}
-            <a href="#msg-{{ msg.reply_to.id }}" onclick="highlightMessage('msg-{{ msg.reply_to.id }}')" class="mb-1.5 flex max-w-full items-center gap-2 rounded-lg border-l-2 border-[#ff9800] bg-[#211d1b] px-3 py-2 text-xs text-[#aaa39d] transition hover:bg-[#29231f]">
+            <a href="#msg-{{ msg.reply_to.id }}" onclick="event.preventDefault(); highlightMessage('msg-{{ msg.reply_to.id }}')" class="mb-1.5 flex max-w-full items-center gap-2 rounded-lg border-l-2 border-[#ff9800] bg-[#211d1b] px-3 py-2 text-xs text-[#aaa39d] transition hover:bg-[#29231f]">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 shrink-0 text-[#ffad33]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17 4 12l5-5M4 12h11a5 5 0 0 1 5 5v1"/></svg>
               <span class="truncate"><strong class="font-semibold text-[#ddd5ce]">{{ msg.reply_to.message_author.username }}</strong> · {{ msg.reply_to.message_content|truncatechars:55 }}</span>
             </a>
@@ -521,6 +521,11 @@
 
   function highlightMessage(id) {
     const el = document.getElementById(id);
+    el.scrollIntoView({
+      behavior: "smooth",
+      block: "center"
+    });
+
     if (!el) return;
     el.classList.add("ring-2", "ring-[#ff9800]/70", "bg-[#392817]");
     setTimeout(() => el.classList.remove("ring-2", "ring-[#ff9800]/70", "bg-[#392817]"), 1800);
@@ -589,25 +594,8 @@
     if (messageDiv) messageDiv.textContent = oldText;
   }
 
-  function navigateToMessage(messageId) {
-    const message = document.getElementById(messageId);
-
-    if (!message) return;
-
-    message.scrollIntoView({
-      behavior: "smooth",
-      block: "center"
-    });
-
-    highlightMessage(messageId);
-  }
-
   window.addEventListener("load", () => {
     scrollToBottom();
-    const messageId = location.hash.substring(1);
-    if (location.hash.startsWith("#msg-")) {
-      navigateToMessage(messageId);
-    }
   });
 </script>
 {% endblock %}
