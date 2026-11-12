@@ -58,7 +58,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
             print(f"failed to broadcast the message maybe the room is closed... {e}")
 
 
-    # TODO : handle if there is a reply message.
     @database_sync_to_async
     def create_message(self, content , reply_message_id = None):
 
