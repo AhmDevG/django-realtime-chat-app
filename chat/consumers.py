@@ -60,22 +60,43 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     # TODO : handle if there is a reply message.
     @database_sync_to_async
-    def create_message(self, content):
+    def create_message(self, content , reply_message_id = None):
+
+        reply_message = None
+        if reply_message_id :
+            reply_message = Message.objects.get(
+                id=reply_message_id,
+                room_id = self.room_id
+            )
+
+
         message = Message.objects.create(
             message_author=self.user,
             room_id=self.room_id,
-            message_content=content
+            message_content=content ,
+            reply_to =  reply_message
         )
 
-        return {
+        return_message = {
             "id": message.id,
             "content": message.message_content,
             "author": {
                 "username": message.message_author.username,
                 "profile": message.message_author.profile.url,
                 "user_id": message.message_author.id,
-            }
+            } ,
+            "reply_to" : None ,
         }
+
+        if reply_message :
+            return_message["reply_to"] =  {
+                "id" : reply_message.id ,
+                "content" : reply_message.message_content,
+                "author" :  reply_message.message_author.username,
+            }
+
+
+        return return_message
 
 
     async def receive(self , text_data):
@@ -83,11 +104,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         if data.get("type") == "message.created":
             content = data["message"]["content"].strip()
+            reply_message_id = data["message"].get("reply_message_id")
 
             if not content :
                 return
 
-            message = await self.create_message(content)
+            message = await self.create_message(content , reply_message_id)
             await self.channel_layer.group_send(self.room_name , {
                 "type" : "message.created",
                 "message": message,
