@@ -521,12 +521,14 @@
 
   function highlightMessage(id) {
     const el = document.getElementById(id);
+
+    if (!el) return;
+
     el.scrollIntoView({
       behavior: "smooth",
       block: "center"
     });
 
-    if (!el) return;
     el.classList.add("ring-2", "ring-[#ff9800]/70", "bg-[#392817]");
     setTimeout(() => el.classList.remove("ring-2", "ring-[#ff9800]/70", "bg-[#392817]"), 1800);
   }
